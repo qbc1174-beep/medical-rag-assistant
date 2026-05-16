@@ -94,6 +94,9 @@ for pdf_file in pdf_files:
         if not text or not text.strip():
             continue
 
+        text = text.replace("-\n", "")
+        text = text.replace("\n", " ")   
+
         chunks = splitter.split_text(text)
 
         for chunk_index, chunk in enumerate(chunks, start=1):
