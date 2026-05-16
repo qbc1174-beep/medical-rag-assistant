@@ -2,6 +2,9 @@ from pathlib import Path
 
 from pypdf import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.documents import Document
 
 PDF_METADATA = {
     "acs.pdf": {
@@ -41,21 +44,27 @@ PDF_METADATA = {
     },
 }
 
-pdf_dir = Path(__file__).resolve().parent.parent / "data" / "pdfs"
-
-print(f"Looking for PDFs in: {pdf_dir}")
-
-pdf_files = list(pdf_dir.glob("*.pdf"))
-
-if not pdf_files:
-    raise FileNotFoundError(f"No PDF files found in {pdf_dir}")
-
-all_chunks = []
+BASE_DIR = Path(__file__).resolve().parent.parent
+PDF_DIR = BASE_DIR / "data" / "pdfs"
+VECTOR_DIR = BASE_DIR / "vector_store"
 
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000,
     chunk_overlap=150,
 )
+
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+documents = []
+
+pdf_files = list(PDF_DIR.glob("*.pdf"))
+
+if not pdf_files:
+    raise FileNotFoundError(f"No PDF files found in {PDF_DIR}")
+
+print(f"Looking for PDFs in: {PDF_DIR}")
 
 for pdf_file in pdf_files:
     print(f"\nProcessing: {pdf_file.name}")
@@ -77,8 +86,6 @@ for pdf_file in pdf_files:
         print(f"Skipping {pdf_file.name}: {e}")
         continue
 
-    print(f"Pages: {len(reader.pages)}")
-
     file_chunk_count = 0
 
     for page_num, page in enumerate(reader.pages, start=1):
@@ -87,31 +94,33 @@ for pdf_file in pdf_files:
         if not text or not text.strip():
             continue
 
-        page_chunks = splitter.split_text(text)
+        chunks = splitter.split_text(text)
 
-        for chunk_index, chunk in enumerate(page_chunks, start=1):
-            all_chunks.append(
-                {
-                    "content": chunk,
-                    "metadata": {
+        for chunk_index, chunk in enumerate(chunks, start=1):
+            documents.append(
+                Document(
+                    page_content=chunk,
+                    metadata={
                         **base_metadata,
                         "file_name": pdf_file.name,
                         "page": page_num,
                         "chunk_index": chunk_index,
                     },
-                }
+                )
             )
 
-        file_chunk_count += len(page_chunks)
+        file_chunk_count += len(chunks)
 
     print(f"Created {file_chunk_count} chunks")
 
-print(f"\nTotal chunks: {len(all_chunks)}")
+print(f"\nTotal chunks: {len(documents)}")
 
-if all_chunks:
-    print("\nSample chunk:\n")
-    print(all_chunks[0]["content"][:500])
-    print("\nMetadata:")
-    print(all_chunks[0]["metadata"])
-else:
-    print("No chunks created. Check if PDFs are present and text-based.")
+if not documents:
+    raise ValueError("No chunks created. Check PDFs.")
+
+print("\nGenerating embeddings and saving FAISS index...")
+
+vector_store = FAISS.from_documents(documents, embeddings)
+vector_store.save_local(str(VECTOR_DIR))
+
+print(f"Vector store saved to: {VECTOR_DIR}")
