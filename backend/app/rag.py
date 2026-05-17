@@ -19,6 +19,7 @@ Rules:
 - Do NOT use outside medical knowledge.
 - Do NOT invent facts.
 - Do NOT give a final diagnosis.
+- Do NOT cite figures, tables, trials, or recommendations unless their text is explicitly present in the retrieved evidence.
 - If evidence is insufficient, say: "I don't know based on current evidence."
 - Keep the answer concise and clinically useful.
 """
@@ -68,7 +69,6 @@ def generate_medical_answer(question: str):
         - Brief clinical answer
         - Differential considerations
         - Red flags / urgent considerations
-        - Evidence used
         """
 
     response = client.chat.completions.create(
