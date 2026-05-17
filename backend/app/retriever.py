@@ -3,7 +3,7 @@ from pathlib import Path
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-from safety import calculate_confidence, should_refuse
+from app.safety import calculate_confidence, should_refuse
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 VECTOR_DIR = BASE_DIR / "vector_store"

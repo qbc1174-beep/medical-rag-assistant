@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from groq import Groq
 
-from retriever import retrieve_medical_evidence
+from app.retriever import retrieve_medical_evidence
 
 load_dotenv()
 
